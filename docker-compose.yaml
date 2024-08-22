@@ -1,0 +1,41 @@
+version: '3.7'
+services:
+  distributed-systems-postgresql:
+    image: postgres:10.17
+    container_name: distributed-systems-postgresql
+    environment:
+      POSTGRES_DB: dist_systems_db
+      POSTGRES_USER: chatbot
+      POSTGRES_PASSWORD: distsystem
+    volumes:
+      - ./initdb.sh:/docker-entrypoint-initdb.d/initdb.sh
+    ports:
+      - "5432:5432"
+    networks:
+      -distributed-systems-network
+
+  distributed-systems-flyway:
+    image: flyway/flyway:6.3.1
+    container_name: distributed-systems-flyway
+    command: -configFiles=/flyway/conf/flyway.config -locations=filesystem:/flyway/sql -connectRetries=60 migrate
+    volumes:
+      - ./../migrate/changelogs:/flyway/sql
+      - ./../migrate/flyway.config:/flyway/conf/flyway.config
+    networks:
+      - distributed-systems-network
+
+  distributed-systems-api:
+    build: .
+    container_name: dist-systems-api
+    ports:
+      - "8080:8080"
+    networks:
+      - distributed-systems-network
+    depends_on:
+      - distributed-systems-postgresql
+      - distributed-systems-flyway
+
+networks:
+  distributed-systems-network:
+    driver: bridge
+    name: distributed-systems-network
